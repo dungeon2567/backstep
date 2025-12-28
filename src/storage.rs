@@ -295,9 +295,10 @@ impl<T: Component> Storage<T> {
             // Only store the old value on the FIRST change within the tick
             if ((rollback_chunk.changed_mask >> chunk_idx) & 1 == 0)
                 && ((rollback_chunk.removed_mask >> chunk_idx) & 1 == 0)
-                && let Some(old_val) = old_value
             {
-                rollback_chunk.data[chunk_idx as usize].write(old_val);
+                if let Some(old_val) = old_value {
+                    rollback_chunk.data[chunk_idx as usize].write(old_val);
+                }
             }
             // Clear created_mask and removed_mask, set changed_mask
             rollback_chunk.removed_mask &= !(1u64 << chunk_idx);
@@ -685,9 +686,8 @@ impl<T: Component> Storage<T> {
                     .skip_while(|rb| rb.tick() <= target_tick);
 
                 for rb in relevant_rollbacks {
-                    if let Some(rb_page) = rb.get_page(storage_idx)
-                        && let Some(rb_chunk) = rb_page.get(page_idx)
-                    {
+                    if let Some(rb_page) = rb.get_page(storage_idx) {
+                        if let Some(rb_chunk) = rb_page.get(page_idx) {
                         // Process all three change types for this chunk
                         let combined_mask =
                             rb_chunk.created_mask | rb_chunk.changed_mask | rb_chunk.removed_mask;
@@ -785,6 +785,7 @@ impl<T: Component> Storage<T> {
                         }
                     }
                 }
+            }
 
                 // finalize page-level masks and possibly drop empty page
                 {

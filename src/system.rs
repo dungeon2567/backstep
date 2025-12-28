@@ -173,12 +173,14 @@ impl<T: Component> ComponentCleanupSystem<T> {
                                         rb_chunk.removed_mask |= 1u64 << chunk_idx;
                                     } else if let Some(rb_page_mut) =
                                         t_storage.rollback.get_page_mut(storage_idx as u32)
-                                        && let Some(rb_chunk_mut) =
-                                            rb_page_mut.get_mut(page_idx as u32)
                                     {
-                                        rb_chunk_mut.created_mask &= !(1u64 << chunk_idx);
-                                        rb_chunk_mut.removed_mask &= !(1u64 << chunk_idx);
-                                        rb_chunk_mut.changed_mask &= !(1u64 << chunk_idx);
+                                        if let Some(rb_chunk_mut) =
+                                            rb_page_mut.get_mut(page_idx as u32)
+                                        {
+                                            rb_chunk_mut.created_mask &= !(1u64 << chunk_idx);
+                                            rb_chunk_mut.removed_mask &= !(1u64 << chunk_idx);
+                                            rb_chunk_mut.changed_mask &= !(1u64 << chunk_idx);
+                                        }
                                     }
 
                                     chunk_mut.presence_mask &= !(1u64 << chunk_idx);

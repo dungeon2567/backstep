@@ -73,6 +73,7 @@ impl<T: Clone> RollbackStorage<T> {
 
     pub fn reset_for_tick(&mut self, tick: Tick) {
         let mut mask = self.changed_mask;
+        
         while mask != 0 {
             let start = mask.trailing_zeros() as usize;
             let shifted = mask >> start;
@@ -141,10 +142,10 @@ impl<T: Clone> RollbackStorage<T> {
         }
 
         // Navigate to chunk and check chunk-level mask (source of truth for specific item)
-        if let Some(page) = self.get_page(storage_idx)
-            && let Some(chunk) = page.get(page_idx)
-        {
-            return (chunk.created_mask >> chunk_idx) & 1 != 0;
+        if let Some(page) = self.get_page(storage_idx) {
+            if let Some(chunk) = page.get(page_idx) {
+                return (chunk.created_mask >> chunk_idx) & 1 != 0;
+            }
         }
 
         false
@@ -163,10 +164,10 @@ impl<T: Clone> RollbackStorage<T> {
         }
 
         // Navigate to chunk and check chunk-level mask (source of truth for specific item)
-        if let Some(page) = self.get_page(storage_idx)
-            && let Some(chunk) = page.get(page_idx)
-        {
-            return (chunk.changed_mask >> chunk_idx) & 1 != 0;
+        if let Some(page) = self.get_page(storage_idx) {
+            if let Some(chunk) = page.get(page_idx) {
+                return (chunk.changed_mask >> chunk_idx) & 1 != 0;
+            }
         }
 
         false
@@ -185,10 +186,10 @@ impl<T: Clone> RollbackStorage<T> {
         }
 
         // Navigate to chunk and check chunk-level mask (source of truth for specific item)
-        if let Some(page) = self.get_page(storage_idx)
-            && let Some(chunk) = page.get(page_idx)
-        {
-            return (chunk.removed_mask >> chunk_idx) & 1 != 0;
+        if let Some(page) = self.get_page(storage_idx) {
+            if let Some(chunk) = page.get(page_idx) {
+                return (chunk.removed_mask >> chunk_idx) & 1 != 0;
+            }
         }
 
         false
@@ -211,18 +212,18 @@ impl<T: Clone> RollbackStorage<T> {
         }
 
         // Navigate to chunk and check that none of the masks are set
-        if let Some(page) = self.get_page(storage_idx)
-            && let Some(chunk) = page.get(page_idx)
-        {
-            let has_created = (chunk.created_mask >> chunk_idx) & 1 != 0;
-            let has_changed = (chunk.changed_mask >> chunk_idx) & 1 != 0;
-            let has_removed = (chunk.removed_mask >> chunk_idx) & 1 != 0;
+        if let Some(page) = self.get_page(storage_idx) {
+            if let Some(chunk) = page.get(page_idx) {
+                let has_created = (chunk.created_mask >> chunk_idx) & 1 != 0;
+                let has_changed = (chunk.changed_mask >> chunk_idx) & 1 != 0;
+                let has_removed = (chunk.removed_mask >> chunk_idx) & 1 != 0;
 
-            if has_created && has_removed && !has_changed {
-                return true;
+                if has_created && has_removed && !has_changed {
+                    return true;
+                }
+
+                return !has_created && !has_changed && !has_removed;
             }
-
-            return !has_created && !has_changed && !has_removed;
         }
 
         // If chunk doesn't exist, it's not tracked
