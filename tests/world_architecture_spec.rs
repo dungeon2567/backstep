@@ -117,8 +117,8 @@ fn world_system_view_viewmut_integration_and_invariants() {
     assert!(world.verify_invariants());
 
     let pos_ptr = world.get_storage::<Position>();
-    let p0 = unsafe { (*pos_ptr).get(0).unwrap() };
-    let p1 = unsafe { (*pos_ptr).get(1).unwrap() };
+    let p0 = unsafe { (*pos_ptr).get(0) };
+    let p1 = unsafe { (*pos_ptr).get(1) };
     assert_eq!((p0.x, p0.y), (1.0, 2.0));
     assert_eq!((p1.x, p1.y), (15.0, 30.0));
 }
@@ -160,8 +160,8 @@ fn world_system_with_none_filter_and_invariants() {
     assert!(world.verify_invariants());
 
     let pos_ptr = world.get_storage::<Position>();
-    let p0 = unsafe { (*pos_ptr).get(0).unwrap() };
-    let p1 = unsafe { (*pos_ptr).get(1).unwrap() };
+    let p0 = unsafe { (*pos_ptr).get(0) };
+    let p1 = unsafe { (*pos_ptr).get(1) };
     assert_eq!((p0.x, p0.y), (1.0, 2.0));
     assert_eq!((p1.x, p1.y), (10.0, 20.0));
 }
@@ -196,12 +196,12 @@ fn world_rollback_over_many_ticks_manual() {
     world.rollback(backstep::tick::Tick(2));
     assert!(world.verify_invariants());
     let pos_ptr = world.get_storage::<Position>();
-    let p = unsafe { (*pos_ptr).get(5).unwrap() };
+    let p = unsafe { (*pos_ptr).get(5) };
     assert_eq!((p.x, p.y), (3.0, 4.0));
 
     world.rollback(backstep::tick::Tick(1));
     assert!(world.verify_invariants());
-    let p = unsafe { (*pos_ptr).get(5).unwrap() };
+    let p = unsafe { (*pos_ptr).get(5) };
     assert_eq!((p.x, p.y), (1.0, 2.0));
 }
 
@@ -233,14 +233,14 @@ fn world_system_run_then_rollback() {
     assert!(world.verify_invariants());
 
     let pos_ptr = world.get_storage::<Position>();
-    let p = unsafe { (*pos_ptr).get(0).unwrap() };
+    let p = unsafe { (*pos_ptr).get(0) };
     assert_eq!((p.x, p.y), (2.0, 4.0));
 
     let target = backstep::tick::Tick(world.current_tick().value() - 1);
     world.rollback(target);
     assert!(world.verify_invariants());
 
-    let p = unsafe { (*pos_ptr).get(0).unwrap() };
+    let p = unsafe { (*pos_ptr).get(0) };
     assert_eq!((p.x, p.y), (1.0, 2.0));
 }
 

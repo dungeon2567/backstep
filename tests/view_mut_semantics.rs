@@ -58,7 +58,7 @@ fn viewmut_marks_changed_and_updates_values() {
 
     let pos_ptr = world.get_storage::<Position>();
     for i in 0..128u32 {
-        let p = unsafe { (*pos_ptr).get(i).unwrap() };
+        let p = unsafe { (*pos_ptr).get(i) };
         if i % 2 == 0 {
             assert_eq!((p.x, p.y), (1.0, 2.0));
         } else {
@@ -93,7 +93,7 @@ fn viewmut_first_change_stores_old_value_once() {
 
     world.rollback(backstep::tick::Tick(70));
     let pos_ptr = world.get_storage::<Position>();
-    let p = unsafe { (*pos_ptr).get(10).unwrap() };
+    let p = unsafe { (*pos_ptr).get(10) };
     assert_eq!((p.x, p.y), (5.0, 6.0));
 
     let sys3 = NoopSystem::new(&mut world);
@@ -156,7 +156,7 @@ fn view_and_viewmut_combination_multiple_chunks() {
 
     let pos_ptr = world.get_storage::<Position>();
     for i in [0, 63, 64, 127, 128, 255].iter().copied() {
-        let p = unsafe { (*pos_ptr).get(i).unwrap() };
+        let p = unsafe { (*pos_ptr).get(i) };
         assert_eq!((p.x, p.y), (i as f32 + 1.0, i as f32 + 2.0));
     }
 

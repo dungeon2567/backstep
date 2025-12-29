@@ -46,7 +46,7 @@ fn rollback_restore_modified_value() {
     }
     world.rollback(backstep::tick::Tick(1));
     let sp = world.get_storage::<TestC>();
-    let v = unsafe { (*sp).get(100).unwrap().v };
+    let v = unsafe { (*sp).get(100).v };
     assert_eq!(v, 1);
 
     let sys = NoopSystem::new(&mut world);
@@ -67,7 +67,7 @@ fn rollback_remove_created_item() {
     }
     world.rollback(backstep::tick::Tick(4));
     let sp = world.get_storage::<TestC>();
-    assert!(unsafe { (*sp).get(5000).is_none() });
+    assert!(unsafe { !(*sp).contains(5000) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);
@@ -93,7 +93,7 @@ fn rollback_restore_removed_value() {
     }
     world.rollback(backstep::tick::Tick(10));
     let sp = world.get_storage::<TestC>();
-    let v = unsafe { (*sp).get(777).unwrap().v };
+    let v = unsafe { (*sp).get(777).v };
     assert_eq!(v, 3);
 
     let sys = NoopSystem::new(&mut world);
@@ -124,8 +124,8 @@ fn rollback_multiple_indices_mixed_changes() {
     }
     world.rollback(backstep::tick::Tick(21));
     let sp = world.get_storage::<TestC>();
-    assert_eq!(unsafe { (*sp).get(64).unwrap().v }, 64);
-    assert!(unsafe { (*sp).get(4096).is_some() });
+    assert_eq!(unsafe { (*sp).get(64).v }, 64);
+    assert!(unsafe { (*sp).contains(4096) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);
@@ -143,7 +143,7 @@ fn rollback_with_no_changes_keeps_state() {
     s.set(&f, 123, TestC { v: 4 });
     world.rollback(backstep::tick::Tick(0));
     let sp = world.get_storage::<TestC>();
-    assert!(unsafe { (*sp).get(123).is_none() });
+    assert!(unsafe { !(*sp).contains(123) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);
@@ -196,8 +196,8 @@ fn rollback_boundary_indices_created_changed_removed() {
     }
     world.rollback(backstep::tick::Tick(50));
     let sp = world.get_storage::<TestC>();
-    assert_eq!(unsafe { (*sp).get(63).unwrap().v }, 1);
-    assert!(unsafe { (*sp).get(4096).is_some() });
+    assert_eq!(unsafe { (*sp).get(63).v }, 1);
+    assert!(unsafe { (*sp).contains(4096) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);

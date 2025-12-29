@@ -51,7 +51,8 @@ fn scheduler_respects_group_ordering() {
     assert!(world.verify_invariants());
 
     let pos_ptr = world.get_storage::<Position>();
-    let p = unsafe { (*pos_ptr).get(0).unwrap() };
+    assert!(unsafe { (*pos_ptr).contains(0) });
+    let p = unsafe { (*pos_ptr).get(0) };
     assert_eq!(p.x, 1.0);
 }
 

@@ -139,7 +139,7 @@ fn set_modify_same_tick_keeps_created_mask_effect() {
 
     world.rollback(backstep::tick::Tick(19));
     let sp = world.get_storage::<TestC>();
-    assert!(unsafe { (*sp).get(512).is_none() });
+    assert!(!unsafe { (*sp).contains(512) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);
@@ -166,7 +166,8 @@ fn set_after_remove_same_tick_marks_changed_effect() {
     }
     world.rollback(backstep::tick::Tick(30));
     let sp = world.get_storage::<TestC>();
-    let v = unsafe { (*sp).get(777).unwrap().v };
+    assert!(unsafe { (*sp).contains(777) });
+    let v = unsafe { (*sp).get(777).v };
     assert_eq!(v, 9);
 
     let sys = NoopSystem::new(&mut world);
@@ -180,7 +181,7 @@ fn get_out_of_bounds_none() {
     register_components_once();
     let mut world = World::new();
     let sp = world.get_storage::<TestC>();
-    assert!(unsafe { (*sp).get(64 * 64 * 64).is_none() });
+    assert!(!unsafe { (*sp).contains(64 * 64 * 64) });
 
     let f = Frame::new(world.current_tick());
     let pos = world.get_storage_mut::<Position>();

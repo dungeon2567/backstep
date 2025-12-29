@@ -296,7 +296,7 @@ fn viewmut_counts_items_and_mutates_values() {
     let pos = unsafe { &*world.get_storage::<Position>() };
 
     for i in 0..300u32 {
-        let p = pos.get(i).unwrap();
+        let p = pos.get(i);
         assert_eq!(p.x, 2.0);
     }
 }

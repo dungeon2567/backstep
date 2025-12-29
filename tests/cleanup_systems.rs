@@ -50,7 +50,7 @@ fn component_cleanup_removes_t_when_destroyed_present() {
 
     let hp_ptr = world.get_storage::<Health>();
     for i in [0, 1, 64, 65].iter().copied() {
-        assert!(unsafe { (*hp_ptr).get(i).is_none() });
+        assert!(!unsafe { (*hp_ptr).contains(i) });
     }
 
     let sys = NoopSystem::new(&mut world);
@@ -76,7 +76,7 @@ fn temporary_cleanup_clears_destroyed_storage() {
 
     let d_ptr = world.get_storage::<backstep::component::Destroyed>();
     for i in [2, 3, 66, 67].iter().copied() {
-        assert!(unsafe { (*d_ptr).get(i).is_none() });
+        assert!(!unsafe { (*d_ptr).contains(i) });
     }
 
     let sys = NoopSystem::new(&mut world);
@@ -113,7 +113,7 @@ fn cleanup_preserves_invariants_across_pages() {
 
     let hp_ptr = world.get_storage::<Health>();
     for i in [0, 63, 64, 4096, 4160].iter().copied() {
-        assert!(unsafe { (*hp_ptr).get(i).is_none() });
+        assert!(!unsafe { (*hp_ptr).contains(i) });
     }
 
     let sys = NoopSystem::new(&mut world);

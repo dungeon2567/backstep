@@ -59,11 +59,11 @@ fn rollback_add_modify_remove_across_boundaries() {
     assert!(world.verify_invariants());
     {
         let s_ptr = world.get_storage::<TestC>();
-        assert_eq!(unsafe { (*s_ptr).get(0).unwrap().v }, -1);
-        assert_eq!(unsafe { (*s_ptr).get(64).unwrap().v }, -1);
-        assert_eq!(unsafe { (*s_ptr).get(50000).unwrap().v }, -1);
-        assert_eq!(unsafe { (*s_ptr).get(63).unwrap().v }, 63);
-        assert_eq!(unsafe { (*s_ptr).get(4160).unwrap().v }, 4160);
+        assert_eq!(unsafe { (*s_ptr).get(0).v }, -1);
+        assert_eq!(unsafe { (*s_ptr).get(64).v }, -1);
+        assert_eq!(unsafe { (*s_ptr).get(50000).v }, -1);
+        assert_eq!(unsafe { (*s_ptr).get(63).v }, 63);
+        assert_eq!(unsafe { (*s_ptr).get(4160).v }, 4160);
     }
 
     // rollback to t=1
@@ -71,11 +71,11 @@ fn rollback_add_modify_remove_across_boundaries() {
     assert!(world.verify_invariants());
     {
         let s_ptr = world.get_storage::<TestC>();
-        assert_eq!(unsafe { (*s_ptr).get(0).unwrap().v }, 0);
-        assert_eq!(unsafe { (*s_ptr).get(64).unwrap().v }, 64);
-        assert_eq!(unsafe { (*s_ptr).get(50000).unwrap().v }, 50000);
-        assert_eq!(unsafe { (*s_ptr).get(63).unwrap().v }, 63);
-        assert_eq!(unsafe { (*s_ptr).get(4160).unwrap().v }, 4160);
+        assert_eq!(unsafe { (*s_ptr).get(0).v }, 0);
+        assert_eq!(unsafe { (*s_ptr).get(64).v }, 64);
+        assert_eq!(unsafe { (*s_ptr).get(50000).v }, 50000);
+        assert_eq!(unsafe { (*s_ptr).get(63).v }, 63);
+        assert_eq!(unsafe { (*s_ptr).get(4160).v }, 4160);
     }
 }
 
@@ -101,9 +101,9 @@ fn rollback_idempotent_add_remove_same_tick_no_effect() {
     assert!(world.verify_invariants());
     {
         let s_ptr = world.get_storage::<TestC>();
-        assert!(unsafe { (*s_ptr).get(1).is_none() });
-        assert!(unsafe { (*s_ptr).get(65).is_none() });
-        assert!(unsafe { (*s_ptr).get(4097).is_none() });
+        assert!(unsafe { !(*s_ptr).contains(1) });
+        assert!(unsafe { !(*s_ptr).contains(65) });
+        assert!(unsafe { !(*s_ptr).contains(4097) });
     }
 }
 

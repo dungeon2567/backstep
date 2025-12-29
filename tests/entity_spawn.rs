@@ -15,8 +15,8 @@ fn spawn_creates_entities_and_sets_in_storage() {
     let e2 = unsafe { &mut *ent_storage }.spawn(&f).unwrap();
 
     let sp = world.get_storage::<backstep::entity::Entity>();
-    assert!(unsafe { (*sp).get(e1.index()).is_some() });
-    assert!(unsafe { (*sp).get(e2.index()).is_some() });
+    assert!(unsafe { (*sp).contains(e1.index()) });
+    assert!(unsafe { (*sp).contains(e2.index()) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);
@@ -36,14 +36,14 @@ fn spawn_until_chunk_boundary_then_remove_and_spawn_again() {
         }
     }
     let sp = world.get_storage::<backstep::entity::Entity>();
-    assert!(unsafe { (*sp).get(0).is_some() });
+    assert!(unsafe { (*sp).contains(0) });
 
     let f2 = Frame::new(world.current_tick());
     assert!(unsafe { &mut *sp }.remove(&f2, 0));
 
     let f3 = Frame::new(world.current_tick());
     let e_new = unsafe { &mut *ent_storage }.spawn(&f3).unwrap();
-    assert!(unsafe { (*sp).get(e_new.index()).is_some() });
+    assert!(unsafe { (*sp).contains(e_new.index()) });
 
     let sys = NoopSystem::new(&mut world);
     world.scheduler_mut().add_system(sys);

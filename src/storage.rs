@@ -98,14 +98,37 @@ impl<T: Component> Storage<T> {
         }
     }
 
-    /// Gets a reference to a value at the given global index.
-    /// Returns None if the value doesn't exist.
-    #[inline(always)]
-    pub fn get(&self, index: u32) -> Option<&T> {
-        // Validate index is within valid range: 0 to 262,143 (64*64*64 - 1)
-        if index >= 64 * 64 * 64 {
-            return None;
+    /// Checks if a value exists at the given global index.
+    pub fn contains(&self, index: u32) -> bool {
+        let chunk_idx = index & 63;
+        let page_idx = (index >> 6) & 63;
+        let storage_idx = index >> 12;
+
+        if storage_idx >= 64 {
+            return false;
         }
+
+        if (self.presence_mask & (1u64 << storage_idx)) == 0 {
+            return false;
+        }
+
+        unsafe {
+            let page_ptr = self.data[storage_idx as usize];
+            if ((*page_ptr).presence_mask & (1u64 << page_idx)) == 0 {
+                return false;
+            }
+
+            let chunk_ptr = (*page_ptr).data[page_idx as usize];
+            ((*chunk_ptr).presence_mask & (1u64 << chunk_idx)) != 0
+        }
+    }
+
+    /// Gets a reference to a value at the given global index.
+    /// Assumes the index is valid and the value exists.
+    #[inline(always)]
+    pub fn get(&self, index: u32) -> &T {
+        // Validate index is within valid range: 0 to 262,143 (64*64*64 - 1)
+        debug_assert!(index < 64 * 64 * 64, "Storage index out of range");
 
         let chunk_idx = index & 63;
         let page_idx = (index >> 6) & 63;
@@ -113,48 +136,31 @@ impl<T: Component> Storage<T> {
 
         unsafe {
             let page_ptr = self.data[storage_idx as usize];
-
             let chunk_ptr = (*page_ptr).data[page_idx as usize];
 
-            let bit = 1u64 << chunk_idx;
+            // debug_assert!(((*chunk_ptr).presence_mask & (1u64 << chunk_idx)) != 0, "Value not present");
 
-            if ((*chunk_ptr).presence_mask & bit) == 0 {
-                return None;
-            }
-
-            Some((*chunk_ptr).data[chunk_idx as usize].assume_init_ref())
+            (*chunk_ptr).data[chunk_idx as usize].assume_init_ref()
         }
     }
 
     /// Gets a mutable reference to a value at the given global index.
-    /// Returns None if the value doesn't exist.
+    /// Assumes the index is valid and the value exists.
     #[inline(always)]
-    pub fn get_mut(&mut self, frame: &crate::frame::Frame, index: u32) -> Option<&mut T> {
+    pub fn get_mut(&mut self, frame: &crate::frame::Frame, index: u32) -> &mut T {
         // Validate index is within valid range
-        if index >= 64 * 64 * 64 {
-            return None;
-        }
+        debug_assert!(index < 64 * 64 * 64, "Storage index out of range");
 
         let chunk_idx = index & 63;
         let page_idx = (index >> 6) & 63;
         let storage_idx = index >> 12;
 
-        if (self.presence_mask >> storage_idx) & 1 == 0 {
-            return None;
-        }
-
         unsafe {
             let page_ptr = self.data[storage_idx as usize];
-            if ((*page_ptr).presence_mask >> page_idx) & 1 == 0 {
-                return None;
-            }
-
             let chunk_ptr = (*page_ptr).data[page_idx as usize];
             let bit = 1u64 << chunk_idx;
 
-            if ((*chunk_ptr).presence_mask & bit) == 0 {
-                return None;
-            }
+            // debug_assert!(((*chunk_ptr).presence_mask & bit) != 0, "Value not present");
 
             self.ensure_rollback_tick(frame.current_tick);
 
@@ -190,7 +196,7 @@ impl<T: Component> Storage<T> {
             rb_page.changed_mask |= 1u64 << page_idx;
             self.rollback.changed_mask |= 1u64 << storage_idx;
 
-            Some((*chunk_ptr).data[chunk_idx as usize].assume_init_mut())
+            (*chunk_ptr).data[chunk_idx as usize].assume_init_mut()
         }
     }
 
