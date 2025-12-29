@@ -17,9 +17,6 @@ struct Health {
     hp: i32,
 }
 
-#[derive(Clone, Debug, PartialEq, Component)]
-struct DestroyedTag;
-
 static INIT: Once = Once::new();
 fn register_components_once() {
     INIT.call_once(|| {

@@ -94,6 +94,7 @@ impl<T: Component> ComponentCleanupSystem<T> {
     /// and removes T components directly. Only entities that exist in both storages will be cleaned up.
     fn cleanup_destroyed_components(&self, frame: &crate::frame::Frame) {
         unsafe {
+            let default_chunk = T::get_default_chunk();
             let t_storage = &mut *self.t_storage;
             let destroyed_storage = &*self.destroyed_storage;
 
@@ -199,11 +200,11 @@ impl<T: Component> ComponentCleanupSystem<T> {
                                         // Drop chunk and reset to default
                                         if !std::ptr::eq(
                                             page_mut.data[page_idx],
-                                            t_storage.default_chunk_ptr,
+                                            default_chunk,
                                         ) {
                                             drop(Box::from_raw(page_mut.data[page_idx]));
                                         }
-                                        let dc = t_storage.default_chunk_ptr as *mut _;
+                                        let dc = default_chunk as *mut _;
                                         page_mut.data[page_idx] = dc;
                                         page_mut.presence_mask &= !(1u64 << page_idx);
                                         page_mut.fullness_mask &= !(1u64 << page_idx);
@@ -288,6 +289,7 @@ impl<T: Component, Group: SystemGroup> TemporaryComponentCleanupSystem<T, Group>
     /// This will drop everything in the storage unconditionally.
     fn cleanup_storage(&self) {
         unsafe {
+            let default_chunk = T::get_default_chunk();
             let t_storage = &mut *self.t_storage;
 
             // Iterate through all pages in reverse order to safely modify during iteration
@@ -367,10 +369,10 @@ impl<T: Component, Group: SystemGroup> TemporaryComponentCleanupSystem<T, Group>
                             let _ = t_chunk;
                             debug_assert!((t_page.presence_mask >> page_idx) & 1 != 0);
                             // Drop chunk and reset to default
-                            if !std::ptr::eq(t_page.data[page_idx], t_storage.default_chunk_ptr) {
+                            if !std::ptr::eq(t_page.data[page_idx], default_chunk) {
                                 drop(Box::from_raw(t_page.data[page_idx]));
                             }
-                            let dc = t_storage.default_chunk_ptr as *mut _;
+                            let dc = default_chunk as *mut _;
                             t_page.data[page_idx] = dc;
                             // Clear chunk from page mask so Page::drop() won't try to drop it again
                             t_page.presence_mask &= !(1u64 << page_idx);
@@ -393,7 +395,7 @@ impl<T: Component, Group: SystemGroup> TemporaryComponentCleanupSystem<T, Group>
                     // Drop the page itself and reset pointer to default
                     debug_assert!((t_storage.presence_mask >> storage_idx) & 1 != 0);
                     drop(Box::from_raw(t_storage.data[storage_idx]));
-                    let dp = t_storage.default_page_ptr as *mut _;
+                    let dp = T::get_default_page() as *mut _;
                     t_storage.data[storage_idx] = dp;
 
                     // Update storage masks to reflect that page is dropped

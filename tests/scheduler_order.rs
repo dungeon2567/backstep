@@ -1,9 +1,7 @@
 use backstep::ecs::Ecs;
 use backstep::frame::Frame;
-use backstep::system; // for `system!`
 use backstep::system::System;
 use backstep::system::SystemGroup;
-use backstep::view::{View, ViewMut};
 use backstep::world::World;
 use backstep_macros::Component;
 use std::any::TypeId;

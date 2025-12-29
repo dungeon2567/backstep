@@ -56,24 +56,12 @@ pub struct Storage<T: Component> {
     pub rollback_pool: Vec<Box<RollbackStorage<T>>>,
     pub data: [*mut Page<T>; 64],
     pub generation: u64,
-    pub default_chunk_ptr: *const Chunk<T>,
-    pub default_page_ptr: *const Page<T>,
 }
 
 impl<T: Component> Storage<T> {
     /// Creates a new empty Storage instance.
     pub fn new() -> Self {
-        // Allocate default chunk (will be leaked intentionally as static default)
-        let default_chunk_ptr: *const Chunk<T> = Box::into_raw(Box::new(Chunk::<T>::new()));
-
-        // Allocate default page (will be leaked intentionally as static default)
-        let default_page_ptr: *const Page<T> = Box::into_raw(Box::new(Page::<T> {
-            presence_mask: 0,
-            fullness_mask: 0,
-            changed_mask: 0,
-            count: 0,
-            data: [default_chunk_ptr as *mut Chunk<T>; 64],
-        }));
+        let default_page_ptr = T::get_default_page();
         Self {
             presence_mask: 0,
             fullness_mask: 0,
@@ -84,8 +72,6 @@ impl<T: Component> Storage<T> {
             rollback_pool: Vec::new(),
             data: [default_page_ptr as *mut Page<T>; 64],
             generation: 1,
-            default_chunk_ptr,
-            default_page_ptr,
         }
     }
 
@@ -221,7 +207,7 @@ impl<T: Component> Storage<T> {
         let page_was_new = (self.presence_mask >> storage_idx) & 1 == 0;
 
         if page_was_new {
-            let new_page = Box::new(Page::new(self.default_chunk_ptr));
+            let new_page = Box::new(Page::new());
             self.data[storage_idx as usize] = Box::into_raw(new_page);
             self.presence_mask |= 1u64 << storage_idx;
             self.changed_mask |= 1u64 << storage_idx;
@@ -498,7 +484,7 @@ impl<T: Component> Storage<T> {
                 let chunk_ptr = page.data[page_idx as usize];
                 // Mask indicates chunk exists, so it cannot be default
                 drop(Box::from_raw(chunk_ptr));
-                page.data[page_idx as usize] = self.default_chunk_ptr as *mut Chunk<T>;
+                page.data[page_idx as usize] = T::get_default_chunk() as *mut Chunk<T>;
                 debug_assert!(
                     page.fullness_mask & !page.presence_mask == 0,
                     "Page fullness_mask invariant violated after dropping chunk"
@@ -594,7 +580,7 @@ impl<T: Component> Storage<T> {
             unsafe {
                 drop(Box::from_raw(page_ptr));
             }
-            self.data[storage_idx as usize] = self.default_page_ptr as *mut Page<T>;
+            self.data[storage_idx as usize] = T::get_default_page() as *mut Page<T>;
             debug_assert!(
                 self.fullness_mask & !self.presence_mask == 0,
                 "Storage fullness_mask invariant violated after dropping page"
@@ -733,7 +719,7 @@ impl<T: Component> Storage<T> {
                                                     drop(Box::from_raw(chunk_ptr));
                                                 }
                                                 page.data[page_idx_usize] =
-                                                    self.default_chunk_ptr as *mut Chunk<T>;
+                                                    T::get_default_chunk() as *mut Chunk<T>;
                                                 page.presence_mask &= !(1u64 << page_idx);
                                             }
                                         }
@@ -748,7 +734,7 @@ impl<T: Component> Storage<T> {
 
                                 // Ensure page/chunk exist
                                 if (self.presence_mask >> storage_idx) & 1 == 0 {
-                                    let new_page = Box::new(Page::new(self.default_chunk_ptr));
+                                    let new_page = Box::new(Page::new());
                                     self.data[storage_idx_usize] = Box::into_raw(new_page);
                                     self.presence_mask |= 1u64 << storage_idx;
                                 }
@@ -799,7 +785,7 @@ impl<T: Component> Storage<T> {
                             unsafe {
                                 drop(Box::from_raw(page_ptr));
                             }
-                            self.data[storage_idx_usize] = self.default_page_ptr as *mut Page<T>;
+                            self.data[storage_idx_usize] = T::get_default_page() as *mut Page<T>;
                             self.presence_mask &= !(1u64 << storage_idx);
                             self.fullness_mask &= !(1u64 << storage_idx);
                         } else {
@@ -959,7 +945,7 @@ impl Storage<crate::entity::Entity> {
 
             // Ensure page exists
             if (self.presence_mask & storage_bit) == 0 {
-                let new_page = Box::new(Page::new(self.default_chunk_ptr));
+                let new_page = Box::new(Page::new());
                 self.data[storage_idx] = Box::into_raw(new_page);
                 self.presence_mask |= storage_bit;
             }
@@ -1015,10 +1001,10 @@ impl<T: Component> Drop for Storage<T> {
         }
 
         // Drop default pointers (intentionally leaked during new())
-        unsafe {
-            drop(Box::from_raw(self.default_chunk_ptr as *mut Chunk<T>));
-            drop(Box::from_raw(self.default_page_ptr as *mut Page<T>));
-        }
+        // unsafe {
+        //    drop(Box::from_raw(self.default_chunk_ptr as *mut Chunk<T>));
+        //    drop(Box::from_raw(self.default_page_ptr as *mut Page<T>));
+        // }
     }
 }
 
@@ -1036,9 +1022,17 @@ pub struct Page<T: Component> {
     pub data: [*mut Chunk<T>; 64],
 }
 
+// Safety: Page contains raw pointers to Chunks.
+// These pointers are only dereferenced by the storage system which ensures
+// thread safety through its own locking/scheduler mechanisms or by ensuring
+// that the data pointed to is thread-safe (like the default chunk).
+unsafe impl<T: Component> Send for Page<T> where T: Send {}
+unsafe impl<T: Component> Sync for Page<T> where T: Sync {}
+
 impl<T: Component> Page<T> {
     /// Creates a new Page.
-    pub fn new(default_chunk_ptr: *const Chunk<T>) -> Self {
+    pub fn new() -> Self {
+        let default_chunk_ptr = T::get_default_chunk();
         Self {
             presence_mask: 0,
             fullness_mask: 0,

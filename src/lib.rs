@@ -15,6 +15,7 @@ pub mod tick;
 pub mod view;
 pub mod world;
 pub mod arena;
+pub mod hierarchy;
 
 // Re-export macros
 pub use backstep_macros::system;

@@ -1,3 +1,5 @@
+use crate::storage::{Chunk, Page};
+
 #[derive(Clone, Copy, PartialEq, Eq, Hash, Default)]
 pub struct Entity(u64);
 
@@ -63,15 +65,42 @@ impl std::fmt::Debug for Entity {
     }
 }
 
-#[allow(non_upper_case_globals)]
-static mut __backstep_COMPONENT_ID_Entity: u32 = 0;
+#[allow(non_snake_case)]
+mod __backstep_component_Entity {
+    use super::Entity;
+    use crate::storage::{Chunk, Page};
 
-// Default page/chunk providers have moved to Storage<T>
+    pub(super) static mut ID: u32 = 0;
+
+    pub(super) static DEFAULT_CHUNK: Chunk<Entity> = Chunk {
+        presence_mask: 0,
+        fullness_mask: 0,
+        changed_mask: 0,
+        data: unsafe { std::mem::MaybeUninit::<[std::mem::MaybeUninit<Entity>; 64]>::uninit().assume_init() },
+    };
+
+    pub(super) static DEFAULT_PAGE: Page<Entity> = Page {
+        presence_mask: 0,
+        fullness_mask: 0,
+        changed_mask: 0,
+        count: 0,
+        data: [&DEFAULT_CHUNK as *const Chunk<Entity> as *mut Chunk<Entity>; 64],
+    };
+}
 
 impl crate::component::Component for Entity {
     fn id() -> u32 {
-        unsafe { __backstep_COMPONENT_ID_Entity }
+        unsafe { __backstep_component_Entity::ID }
     }
+
+    fn get_default_chunk() -> *const Chunk<Self> {
+        &__backstep_component_Entity::DEFAULT_CHUNK
+    }
+
+    fn get_default_page() -> *const Page<Self> {
+        &__backstep_component_Entity::DEFAULT_PAGE
+    }
+
     fn initialize(id: u32) {
         let _ = id;
     }

@@ -639,11 +639,77 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
     let generics = input.generics;
     let (impl_generics, ty_generics, where_clause) = generics.split_for_impl();
     let id_mod = format_ident!("__backstep_component_id_{}", name);
+
+    let has_generics = !generics.params.is_empty();
+
+    let (mod_content, methods) = if !has_generics {
+        (
+            quote! {
+                use super::#name;
+                pub(super) static mut ID: u32 = u32::MAX;
+                pub(super) static DEFAULT_CHUNK: backstep::storage::Chunk<#name> = backstep::storage::Chunk {
+                    presence_mask: 0,
+                    fullness_mask: 0,
+                    changed_mask: 0,
+                    data: unsafe { ::std::mem::MaybeUninit::<[::std::mem::MaybeUninit<#name>; 64]>::uninit().assume_init() },
+                };
+                pub(super) static DEFAULT_PAGE: backstep::storage::Page<#name> = backstep::storage::Page {
+                    presence_mask: 0,
+                    fullness_mask: 0,
+                    changed_mask: 0,
+                    count: 0,
+                    data: [&DEFAULT_CHUNK as *const backstep::storage::Chunk<#name> as *mut backstep::storage::Chunk<#name>; 64],
+                };
+            },
+            quote! {
+                fn get_default_chunk() -> *const backstep::storage::Chunk<Self> {
+                    &#id_mod::DEFAULT_CHUNK
+                }
+
+                fn get_default_page() -> *const backstep::storage::Page<Self> {
+                    &#id_mod::DEFAULT_PAGE
+                }
+            }
+        )
+    } else {
+        (
+            quote! {
+                pub(super) static mut ID: u32 = u32::MAX;
+            },
+            quote! {
+                fn get_default_chunk() -> *const backstep::storage::Chunk<Self> {
+                    static DEFAULT_CHUNK: backstep::storage::Chunk<#name #ty_generics> = backstep::storage::Chunk {
+                        presence_mask: 0,
+                        fullness_mask: 0,
+                        changed_mask: 0,
+                        data: unsafe { ::std::mem::MaybeUninit::<[::std::mem::MaybeUninit<#name #ty_generics>; 64]>::uninit().assume_init() },
+                    };
+                    &DEFAULT_CHUNK
+                }
+
+                fn get_default_page() -> *const backstep::storage::Page<Self> {
+                    static DEFAULT_PAGE: std::sync::OnceLock<backstep::storage::Page<#name #ty_generics>> = std::sync::OnceLock::new();
+                    DEFAULT_PAGE.get_or_init(|| {
+                        let chunk_ptr = Self::get_default_chunk();
+                        backstep::storage::Page {
+                            presence_mask: 0,
+                            fullness_mask: 0,
+                            changed_mask: 0,
+                            count: 0,
+                            data: [chunk_ptr as *mut _; 64],
+                        }
+                    })
+                }
+            }
+        )
+    };
+
     TokenStream::from(quote! {
         #[allow(non_snake_case)]
         mod #id_mod {
-            pub(super) static mut ID: u32 = u32::MAX;
+            #mod_content
         }
+
         impl #impl_generics backstep::component::Component for #name #ty_generics #where_clause {
             fn id() -> u32 {
                 unsafe { self::#id_mod::ID }
@@ -657,9 +723,11 @@ pub fn derive_component(input: TokenStream) -> TokenStream {
             }
 
             fn schedule_cleanup_system(world: &mut backstep::world::World) {
-                let sys = backstep::system::ComponentCleanupSystem::<#name>::new(world);
+                let sys = backstep::system::ComponentCleanupSystem::<#name #ty_generics>::new(world);
                 world.scheduler_mut().add_system(sys);
             }
+
+            #methods
         }
 
     })
